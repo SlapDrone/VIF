@@ -1,0 +1,3 @@
+[submodule "DKL-GP"]
+	path = DKL-GP
+	url = git@github.com:SlapDrone/DKL-GP.git

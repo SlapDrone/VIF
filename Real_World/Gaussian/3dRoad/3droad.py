@@ -6,21 +6,13 @@ app = marimo.App()
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(
-        r"""
-        # Real World Application
-        """
-    )
+    mo.md(r"""# Real World Application""")
     return
 
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(
-        r"""
-        ## Packages
-        """
-    )
+    mo.md(r"""## Packages""")
     return
 
 
@@ -89,11 +81,7 @@ def _():
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(
-        r"""
-        ## Functions
-        """
-    )
+    mo.md(r"""## Functions""")
     return
 
 
@@ -111,7 +99,7 @@ def _(norm, np, torch):
 
         y_train = (y_train-mean)/sd
         y_test = (y_test-mean)/sd
-    
+
         return X_train, X_test, y_train, y_test
 
     # Find too close points
@@ -128,19 +116,19 @@ def _(norm, np, torch):
     def crps_norm_vectorized(observations, means, sigmas):
         """
         Compute CRPS for multiple normal distributions.
-    
+
         Parameters:
         observations (array-like): Observed values
         means (array-like): Means of the forecast distributions
         sigmas (array-like): Variance of the forecast distributions
-    
+
         Returns:
         array-like: CRPS values
         """
         observations = np.asarray(observations)
         means = np.asarray(means)
         sigmas = np.sqrt(np.asarray(sigmas))
-    
+
         z = (observations - means) / sigmas
         crps = sigmas * (z * (2 * norm.cdf(z) - 1) + 2 * norm.pdf(z) - 1 / np.sqrt(np.pi))
         return np.mean(crps)
@@ -149,19 +137,19 @@ def _(norm, np, torch):
     def log_score_norm_vectorized(observations, means, sigmas):
         """
         Compute Log Score for multiple normal distributions.
-    
+
         Parameters:
         observations (array-like): Observed values
         means (array-like): Means of the forecast distributions
         sigmas (array-like): Variance of the forecast distributions
-    
+
         Returns:
         array-like: Log Score values
         """
         observations = np.asarray(observations)
         means = np.asarray(means)
         sigmas = np.sqrt(np.asarray(sigmas))
-    
+
         return np.mean(-norm.logpdf(observations, means, sigmas))
     return (
         Scale,
@@ -173,21 +161,13 @@ def _(norm, np, torch):
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(
-        r"""
-        ## Data
-        """
-    )
+    mo.md(r"""## Data""")
     return
 
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(
-        r"""
-        Choose dataset:
-        """
-    )
+    mo.md(r"""Choose dataset:""")
     return
 
 
@@ -245,31 +225,19 @@ def _(KFold, X):
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(
-        r"""
-        ## Models
-        """
-    )
+    mo.md(r"""## Models""")
     return
 
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(
-        r"""
-        #### SKIP
-        """
-    )
+    mo.md(r"""#### SKIP""")
     return
 
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(
-        r"""
-        #### Parameters
-        """
-    )
+    mo.md(r"""#### Parameters""")
     return
 
 
@@ -282,11 +250,7 @@ def _():
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(
-        r"""
-        #### Model
-        """
-    )
+    mo.md(r"""#### Model""")
     return
 
 
@@ -320,11 +284,7 @@ def _(
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(
-        r"""
-        #### Training & Prediction
-        """
-    )
+    mo.md(r"""#### Training & Prediction""")
     return
 
 
@@ -348,7 +308,7 @@ app._unparsable_cell(
         X_train, X_test, y_train, y_test = Scale(X_train, X_test, y_train, y_test)
         print(X_train.shape)
         print(y_train.shape)
-    
+
         # Convert the numpy arrays to PyTorch tensors
         X_train_tensor = torch.tensor(X_train, dtype=torch.float32)
         X_test_tensor = torch.tensor(X_test, dtype=torch.float32)
@@ -360,9 +320,9 @@ app._unparsable_cell(
         y_train_tensor = y_train_tensor[mask_all]
         print(X_train.shape)
         print(y_train.shape)
-    
+
         print(f\"Split {j+1} Test Response: {y_test}\")
-    
+
         # Model
         likelihood = gpytorch.likelihoods.GaussianLikelihood()
         model_SKIP = GPRegressionModel(X_train_tensor, y_train_tensor, likelihood)
@@ -373,7 +333,7 @@ app._unparsable_cell(
             likelihood = likelihood.cuda()
         # \"Loss\" for GPs - the marginal log likelihood
         mll = gpytorch.mlls.ExactMarginalLogLikelihood(likelihood, model_SKIP)
-    
+
         # Train
         def train():
             #iterator = tqdm.tqdm(range(training_iterations), desc=\"Train\")
@@ -388,14 +348,14 @@ app._unparsable_cell(
                     loss.backward()
                 optimizer.step()
                 torch.cuda.empty_cache()
-        
+    
                 if (i+1) % 10 == 0:
                     print(f\"Iteration {i+1}/{training_iterations}\")
                     print(f\"Loss: {loss.item()}\n\")
-        
+    
 
             print(\"Training completed.\")
-    
+
         start_time = time.time()
         %time train()
         runtime_SKIP = time.time() - start_time
@@ -429,21 +389,13 @@ app._unparsable_cell(
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(
-        r"""
-        ### Sparse Gaussian Process Regression (SGPR)
-        """
-    )
+    mo.md(r"""### Sparse Gaussian Process Regression (SGPR)""")
     return
 
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(
-        r"""
-        #### Parameters
-        """
-    )
+    mo.md(r"""#### Parameters""")
     return
 
 
@@ -456,11 +408,7 @@ def _():
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(
-        r"""
-        #### Model
-        """
-    )
+    mo.md(r"""#### Model""")
     return
 
 
@@ -492,11 +440,7 @@ def _(
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(
-        r"""
-        #### Training & Prediction
-        """
-    )
+    mo.md(r"""#### Training & Prediction""")
     return
 
 
@@ -520,7 +464,7 @@ app._unparsable_cell(
         X_train, X_test, y_train, y_test = Scale(X_train, X_test, y_train, y_test)
         print(X_train.shape)
         print(y_train.shape)
-    
+
         # Convert the numpy arrays to PyTorch tensors
         X_train_tensor = torch.tensor(X_train, dtype=torch.float32)
         X_test_tensor = torch.tensor(X_test, dtype=torch.float32)
@@ -532,9 +476,9 @@ app._unparsable_cell(
         y_train_tensor = y_train_tensor[mask_all]
         print(X_train.shape)
         print(y_train.shape)
-    
+
         print(f\"Split {j+1} Test Response: {y_test}\")
-    
+
         # Model
         likelihood = gpytorch.likelihoods.GaussianLikelihood()
         model_SGPR = SGPR(X_train_tensor, y_train_tensor, likelihood)
@@ -546,7 +490,7 @@ app._unparsable_cell(
             likelihood = likelihood.cuda()
         # \"Loss\" for GPs - the marginal log likelihood
         mll = gpytorch.mlls.ExactMarginalLogLikelihood(likelihood, model_SGPR)
-    
+
         # Train
         def train():
             #iterator = tqdm.tqdm(range(training_iterations), desc=\"Train\")
@@ -560,13 +504,13 @@ app._unparsable_cell(
                     return loss
 
                 loss = optimizer.step(closure)
-        
+    
                 if (i+1) % 10 == 0:
                     print(f\"Iteration {i+1}/{training_iterations}\")
                     print(f\"Loss: {loss.item()}\n\")
 
             print(\"Training completed.\")
-    
+
         start_time = time.time()
         %time train()
         runtime_SGPR = time.time() - start_time
@@ -599,21 +543,13 @@ app._unparsable_cell(
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(
-        r"""
-        ### Stochastic Variational Gaussian Processes (SVGP)
-        """
-    )
+    mo.md(r"""### Stochastic Variational Gaussian Processes (SVGP)""")
     return
 
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(
-        r"""
-        #### Parameters
-        """
-    )
+    mo.md(r"""#### Parameters""")
     return
 
 
@@ -626,11 +562,7 @@ def _():
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(
-        r"""
-        #### Model
-        """
-    )
+    mo.md(r"""#### Model""")
     return
 
 
@@ -660,11 +592,7 @@ def _(
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(
-        r"""
-        #### Training & Prediction
-        """
-    )
+    mo.md(r"""#### Training & Prediction""")
     return
 
 
@@ -688,7 +616,7 @@ app._unparsable_cell(
         X_train, X_test, y_train, y_test = Scale(X_train, X_test, y_train, y_test)
         print(X_train.shape)
         print(y_train.shape)
-    
+
         # Convert the numpy arrays to PyTorch tensors
         X_train_tensor = torch.tensor(X_train, dtype=torch.float32)
         X_test_tensor = torch.tensor(X_test, dtype=torch.float32)
@@ -706,9 +634,9 @@ app._unparsable_cell(
 
         test_dataset = TensorDataset(X_test_tensor, y_test_tensor)
         test_loader = DataLoader(test_dataset, batch_size=1024, shuffle=False)
-    
+
         print(f\"Split {j+1} Test Response: {y_test}\")
-    
+
         # Model
         likelihood = gpytorch.likelihoods.GaussianLikelihood()
         inducing_points = X_train_tensor[:num_inducing_points, :]
@@ -725,7 +653,7 @@ app._unparsable_cell(
         ], lr=0.01)
         # Our loss object. We're using the VariationalELBO
         mll = gpytorch.mlls.VariationalELBO(likelihood, model_SVGP, num_data=y_train_tensor.size(0))
-    
+
         # Train
         def train():
             print(\"Training started.\")
@@ -743,9 +671,9 @@ app._unparsable_cell(
                 if (i+1) % 10 == 0:
                     print(f\"Iteration {i + 1}/{training_iterations}\")
                     print(f\"Loss: {loss.item()}\n\")
-                
+            
             print(\"Training completed.\")
-    
+
         start_time = time.time()
         %time train()
         runtime_SVGP = time.time() - start_time
@@ -763,7 +691,7 @@ app._unparsable_cell(
                 variances_SVGP = torch.cat([variances_SVGP, preds.variance.cpu()])
             means_SVGP = means_SVGP[1:]
             variances_SVGP = variances_SVGP[1:]
-        
+    
             MAE_SVGP = torch.mean(torch.abs(means_SVGP - y_test_tensor))
             RMSE_SVGP = torch.sqrt(torch.mean(torch.square(means_SVGP - y_test_tensor)))
             LS_SVGP = log_score_norm_vectorized(y_test_tensor,means_SVGP,variances_SVGP)
@@ -785,21 +713,13 @@ app._unparsable_cell(
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(
-        r"""
-        ### Double-Kullback-Leibler-optimal Gaussian-process approximation (DKL-GP)
-        """
-    )
+    mo.md(r"""### Double-Kullback-Leibler-optimal Gaussian-process approximation (DKL-GP)""")
     return
 
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(
-        r"""
-        #### Parameters
-        """
-    )
+    mo.md(r"""#### Parameters""")
     return
 
 
@@ -813,11 +733,7 @@ def _():
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(
-        r"""
-        #### Train & Prediction
-        """
-    )
+    mo.md(r"""#### Train & Prediction""")
     return
 
 
@@ -894,21 +810,13 @@ def _(
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(
-        r"""
-        ### VIF Approximation
-        """
-    )
+    mo.md(r"""### VIF Approximation""")
     return
 
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(
-        r"""
-        #### Parameters
-        """
-    )
+    mo.md(r"""#### Parameters""")
     return
 
 
@@ -922,11 +830,7 @@ def _():
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(
-        r"""
-        #### Training & Prediction
-        """
-    )
+    mo.md(r"""#### Training & Prediction""")
     return
 
 
@@ -1015,21 +919,13 @@ def _(
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(
-        r"""
-        ### VIF Approximation (estimate shape parameter)
-        """
-    )
+    mo.md(r"""### VIF Approximation (estimate shape parameter)""")
     return
 
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(
-        r"""
-        #### Parameters
-        """
-    )
+    mo.md(r"""#### Parameters""")
     return
 
 
@@ -1043,11 +939,7 @@ def _():
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(
-        r"""
-        #### Training & Prediction
-        """
-    )
+    mo.md(r"""#### Training & Prediction""")
     return
 
 
@@ -1118,21 +1010,13 @@ def _(
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(
-        r"""
-        ### VIF Approximation (Linear Regression + GP)
-        """
-    )
+    mo.md(r"""### VIF Approximation (Linear Regression + GP)""")
     return
 
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(
-        r"""
-        #### Parameters
-        """
-    )
+    mo.md(r"""#### Parameters""")
     return
 
 
@@ -1146,11 +1030,7 @@ def _():
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(
-        r"""
-        #### Training & Prediction
-        """
-    )
+    mo.md(r"""#### Training & Prediction""")
     return
 
 
@@ -1221,21 +1101,13 @@ def _(
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(
-        r"""
-        ### VIF Approximation (GPBoost)
-        """
-    )
+    mo.md(r"""### VIF Approximation (GPBoost)""")
     return
 
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(
-        r"""
-        #### Parameters
-        """
-    )
+    mo.md(r"""#### Parameters""")
     return
 
 
@@ -1249,11 +1121,7 @@ def _():
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(
-        r"""
-        #### Training & Prediction
-        """
-    )
+    mo.md(r"""#### Training & Prediction""")
     return
 
 
