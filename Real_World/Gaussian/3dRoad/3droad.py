@@ -23,6 +23,7 @@ def _():
     import math
     import torch
     from matplotlib import pyplot as plt
+    from pathlib import Path
     import time
 
     # GPytorch
@@ -57,17 +58,23 @@ def _():
 
 
     from sklearn.cluster import KMeans
+
+    current_dir = Path("Real_World/Gaussian/3dRoad/")
+    assert current_dir.exists
     return (
         ApproximateGP,
         CholeskyVariationalDistribution,
         ConstantMean,
+        DataLoader,
         InducingPointKernel,
         KFold,
         MaternKernel,
         MultivariateNormal,
         ScaleKernel,
+        TensorDataset,
         VIVA,
         VariationalStrategy,
+        current_dir,
         gpb,
         gpytorch,
         my_train,
@@ -77,6 +84,35 @@ def _():
         time,
         torch,
     )
+
+
+@app.cell
+def _(mo):
+    mo.md(
+        r"""
+    ## dataset info
+
+    https://archive.ics.uci.edu/dataset/246/3d+road+network+north+jutland+denmark
+
+    ### variables
+
+    <OSM_ID,LONGITUDE,LATITUDE,ALTITUDE(mts)>
+
+
+
+    1. OSM_ID: OpenStreetMap ID for each road segment or edge in the graph.
+
+    2. LONGITUDE: Web Mercaptor (Google format) longitude 
+
+    3. LATITUDE: Web Mercaptor (Google format) latitude
+
+    4. ALTITUDE: Height in meters. 
+
+
+    Note: OSM_ID is the ID assigned by OpenStreetMaps (http://www.openstreetmap.org/) to the road segments. Each (long,lat,altitude) point on a road segment (with unique OSM ID) is sorted in the same order as they appear on the road. So a 3D-polyline can be drawn by joining points of each row for each OSM_ID road segment.
+    """
+    )
+    return
 
 
 @app.cell(hide_code=True)
@@ -173,13 +209,45 @@ def _(mo):
 
 @app.cell
 def _(pd):
-    data = pd.read_csv('https://raw.githubusercontent.com/TimGyger/VIF/refs/heads/main/Real%20World/Gaussian/3dRoad/3droad.txt', sep=" ", header=None)
+    data = pd.read_csv('Real_World/Gaussian/3dRoad/3droad.txt', sep=" ", header=None)
     return (data,)
 
 
 @app.cell
 def _(data):
-    data.head(3)
+    data.head(10)
+    return
+
+
+@app.cell
+def _(mo):
+    mo.md("""
+    ### shape
+    (434874, 4)
+
+    ### sample (CSV):
+    0,1,2,3
+
+    -14.444,0.035491,-1.7668,-0.71242
+
+    2.0305,1.281,0.92971,0.71251
+
+    -7.4101,1.2566,0.46466,0.30651
+
+    -6.2772,-1.4061,1.2401,1.2591
+
+    75.32299999999998,1.3986,0.4294,-1.5161
+
+    -20.021,0.79518,-0.84711,-0.14732
+
+    10.22,-1.818,-1.7353,-0.50704
+
+    18.562,1.3292,0.84389,0.30658
+
+    9.7562,-1.6114,-0.60016,0.18791
+
+    -0.38832,0.035488,-2.1916,-0.54998
+     """)
     return
 
 
@@ -207,7 +275,18 @@ def _(data, find_unique_X, np, torch):
     X = X[:, mask]
 
     d = X.shape[1] # Features
-    return X, d, y
+    return X, d, mask_all, y
+
+
+@app.cell
+def _():
+    return
+
+
+@app.cell
+def _(current_dir, mask_all, torch):
+    torch.save(mask_all, current_dir / "mask_all.pth")
+    return
 
 
 @app.cell
@@ -245,7 +324,7 @@ def _(mo):
 def _():
     num_inducing_points = 1000
     training_iterations = 100
-    return (num_inducing_points,)
+    return num_inducing_points, training_iterations
 
 
 @app.cell(hide_code=True)
@@ -279,7 +358,7 @@ def _(
             univariate_covars = self.covar_module(x.mT.unsqueeze(-1))
             covar_x = univariate_covars.prod(dim=-3)
             return MultivariateNormal(mean_x, covar_x)
-    return
+    return (GPRegressionModel,)
 
 
 @app.cell(hide_code=True)
@@ -288,8 +367,24 @@ def _(mo):
     return
 
 
-app._unparsable_cell(
-    r"""
+@app.cell
+def _(
+    GPRegressionModel,
+    Scale,
+    X,
+    crps_norm_vectorized,
+    find_unique_X,
+    gpytorch,
+    log_score_norm_vectorized,
+    np,
+    pd,
+    test_indices_sets,
+    time,
+    torch,
+    train_indices_sets,
+    training_iterations,
+    y,
+):
     # Define row and column names
     row_names = ['MAE', 'RMSE', 'CRPS', 'LS','Time']
     col_names = ['Iteration 1', 'Iteration 2', 'Iteration 3', 'Iteration 4', 'Iteration 5']
@@ -321,7 +416,7 @@ app._unparsable_cell(
         print(X_train.shape)
         print(y_train.shape)
 
-        print(f\"Split {j+1} Test Response: {y_test}\")
+        print(f"Split {j+1} Test Response: {y_test}")
 
         # Model
         likelihood = gpytorch.likelihoods.GaussianLikelihood()
@@ -331,13 +426,13 @@ app._unparsable_cell(
         if torch.cuda.is_available():
             model_SKIP = model_SKIP.cuda()
             likelihood = likelihood.cuda()
-        # \"Loss\" for GPs - the marginal log likelihood
+        # "Loss" for GPs - the marginal log likelihood
         mll = gpytorch.mlls.ExactMarginalLogLikelihood(likelihood, model_SKIP)
 
         # Train
         def train():
-            #iterator = tqdm.tqdm(range(training_iterations), desc=\"Train\")
-            print(\"Training started.\")
+            #iterator = tqdm.tqdm(range(training_iterations), desc="Train")
+            print("Training started.")
             for i in range(training_iterations):
                 optimizer.zero_grad()
                 with gpytorch.settings.use_toeplitz(False), gpytorch.settings.max_root_decomposition_size(100):
@@ -348,20 +443,20 @@ app._unparsable_cell(
                     loss.backward()
                 optimizer.step()
                 torch.cuda.empty_cache()
-    
-                if (i+1) % 10 == 0:
-                    print(f\"Iteration {i+1}/{training_iterations}\")
-                    print(f\"Loss: {loss.item()}\n\")
-    
 
-            print(\"Training completed.\")
+                if (i+1) % 10 == 0:
+                    print(f"Iteration {i+1}/{training_iterations}")
+                    print(f"Loss: {loss.item()}\n")
+
+
+            print("Training completed.")
 
         start_time = time.time()
-        %time train()
+        train()
         runtime_SKIP = time.time() - start_time
 
         # Prediction
-        print(\"Prediction started.\")
+        print("Prediction started.")
         model_SKIP.eval()
         likelihood.eval()
         with gpytorch.settings.max_preconditioner_size(100), torch.no_grad():
@@ -382,9 +477,7 @@ app._unparsable_cell(
             print('Test CRPS: {}'.format(CRPS_SKIP))
             print('Test LS: {}'.format(LS_SKIP))
             print('Runtime: {} seconds'.format(runtime_SKIP))
-    """,
-    name="_"
-)
+    return (mask_all,)
 
 
 @app.cell(hide_code=True)
@@ -435,7 +528,7 @@ def _(
             mean_x = self.mean_module(x)
             covar_x = self.covar_module(x)
             return MultivariateNormal(mean_x, covar_x)
-    return
+    return (SGPR,)
 
 
 @app.cell(hide_code=True)
@@ -444,8 +537,24 @@ def _(mo):
     return
 
 
-app._unparsable_cell(
-    r"""
+@app.cell
+def _(
+    SGPR,
+    Scale,
+    X,
+    crps_norm_vectorized,
+    find_unique_X,
+    gpytorch,
+    log_score_norm_vectorized,
+    np,
+    pd,
+    test_indices_sets,
+    time,
+    torch,
+    train_indices_sets,
+    training_iterations,
+    y,
+):
     # Define row and column names
     row_names = ['MAE', 'RMSE', 'CRPS', 'LS','Time']
     col_names = ['Iteration 1', 'Iteration 2', 'Iteration 3', 'Iteration 4', 'Iteration 5']
@@ -477,7 +586,7 @@ app._unparsable_cell(
         print(X_train.shape)
         print(y_train.shape)
 
-        print(f\"Split {j+1} Test Response: {y_test}\")
+        print(f"Split {j+1} Test Response: {y_test}")
 
         # Model
         likelihood = gpytorch.likelihoods.GaussianLikelihood()
@@ -488,13 +597,13 @@ app._unparsable_cell(
         if torch.cuda.is_available():
             model_SGPR = model_SGPR.cuda()
             likelihood = likelihood.cuda()
-        # \"Loss\" for GPs - the marginal log likelihood
+        # "Loss" for GPs - the marginal log likelihood
         mll = gpytorch.mlls.ExactMarginalLogLikelihood(likelihood, model_SGPR)
 
         # Train
         def train():
-            #iterator = tqdm.tqdm(range(training_iterations), desc=\"Train\")
-            print(\"Training started.\")
+            #iterator = tqdm.tqdm(range(training_iterations), desc="Train")
+            print("Training started.")
             for i in range(training_iterations):
                 def closure():
                     optimizer.zero_grad()
@@ -504,19 +613,19 @@ app._unparsable_cell(
                     return loss
 
                 loss = optimizer.step(closure)
-    
-                if (i+1) % 10 == 0:
-                    print(f\"Iteration {i+1}/{training_iterations}\")
-                    print(f\"Loss: {loss.item()}\n\")
 
-            print(\"Training completed.\")
+                if (i+1) % 10 == 0:
+                    print(f"Iteration {i+1}/{training_iterations}")
+                    print(f"Loss: {loss.item()}\n")
+
+            print("Training completed.")
 
         start_time = time.time()
-        %time train()
+        train()
         runtime_SGPR = time.time() - start_time
 
         # Prediction
-        print(\"Prediction started.\")
+        print("Prediction started.")
         model_SGPR.eval()
         likelihood.eval()
         with torch.no_grad(), gpytorch.settings.fast_pred_var():
@@ -536,9 +645,7 @@ app._unparsable_cell(
             print('Test CRPS: {}'.format(CRPS_SGPR))
             print('Test LS: {}'.format(LS_SGPR))
             print('Runtime: {} seconds'.format(runtime_SGPR))
-    """,
-    name="_"
-)
+    return (mask_all,)
 
 
 @app.cell(hide_code=True)
@@ -587,7 +694,7 @@ def _(
             mean_x = self.mean_module(x)
             covar_x = self.covar_module(x)
             return gpytorch.distributions.MultivariateNormal(mean_x, covar_x)
-    return
+    return (SVGP,)
 
 
 @app.cell(hide_code=True)
@@ -596,8 +703,27 @@ def _(mo):
     return
 
 
-app._unparsable_cell(
-    r"""
+@app.cell
+def _(
+    DataLoader,
+    SVGP,
+    Scale,
+    TensorDataset,
+    X,
+    crps_norm_vectorized,
+    find_unique_X,
+    gpytorch,
+    log_score_norm_vectorized,
+    np,
+    num_inducing_points,
+    pd,
+    test_indices_sets,
+    time,
+    torch,
+    train_indices_sets,
+    training_iterations,
+    y,
+):
     # Define row and column names
     row_names = ['MAE', 'RMSE', 'CRPS', 'LS','Time']
     col_names = ['Iteration 1', 'Iteration 2', 'Iteration 3', 'Iteration 4', 'Iteration 5']
@@ -635,7 +761,7 @@ app._unparsable_cell(
         test_dataset = TensorDataset(X_test_tensor, y_test_tensor)
         test_loader = DataLoader(test_dataset, batch_size=1024, shuffle=False)
 
-        print(f\"Split {j+1} Test Response: {y_test}\")
+        print(f"Split {j+1} Test Response: {y_test}")
 
         # Model
         likelihood = gpytorch.likelihoods.GaussianLikelihood()
@@ -656,11 +782,11 @@ app._unparsable_cell(
 
         # Train
         def train():
-            print(\"Training started.\")
-            #epochs_iter = tqdm.tqdm(range(training_iterations), desc=\"Epoch\")
+            print("Training started.")
+            #epochs_iter = tqdm.tqdm(range(training_iterations), desc="Epoch")
             for i in range(training_iterations):
                 # Within each iteration, we will go over each minibatch of data
-                #minibatch_iter = tqdm.tqdm(train_loader, desc=\"Minibatch\", leave=False)
+                #minibatch_iter = tqdm.tqdm(train_loader, desc="Minibatch", leave=False)
                 for x_batch, y_batch in train_loader:
                     optimizer.zero_grad()
                     output = model_SVGP(x_batch)
@@ -669,17 +795,17 @@ app._unparsable_cell(
                     loss.backward()
                     optimizer.step()
                 if (i+1) % 10 == 0:
-                    print(f\"Iteration {i + 1}/{training_iterations}\")
-                    print(f\"Loss: {loss.item()}\n\")
-            
-            print(\"Training completed.\")
+                    print(f"Iteration {i + 1}/{training_iterations}")
+                    print(f"Loss: {loss.item()}\n")
+
+            print("Training completed.")
 
         start_time = time.time()
-        %time train()
+        train()
         runtime_SVGP = time.time() - start_time
 
         # Prediction
-        print(\"Prediction started.\")
+        print("Prediction started.")
         model_SVGP.eval()
         likelihood.eval()
         means_SVGP = torch.tensor([0.])
@@ -691,7 +817,7 @@ app._unparsable_cell(
                 variances_SVGP = torch.cat([variances_SVGP, preds.variance.cpu()])
             means_SVGP = means_SVGP[1:]
             variances_SVGP = variances_SVGP[1:]
-    
+
             MAE_SVGP = torch.mean(torch.abs(means_SVGP - y_test_tensor))
             RMSE_SVGP = torch.sqrt(torch.mean(torch.square(means_SVGP - y_test_tensor)))
             LS_SVGP = log_score_norm_vectorized(y_test_tensor,means_SVGP,variances_SVGP)
@@ -706,9 +832,7 @@ app._unparsable_cell(
             print('Test CRPS: {}'.format(CRPS_SVGP))
             print('Test LS: {}'.format(LS_SVGP))
             print('Runtime: {} seconds'.format(runtime_SVGP))
-    """,
-    name="_"
-)
+    return (mask_all,)
 
 
 @app.cell(hide_code=True)
